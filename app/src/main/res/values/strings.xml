@@ -7,4 +7,9 @@
     <string name="cm">Cm</string>
     <string name="calculate">Calculate</string>
     <string name="your_score">Your Score</string>
+    <string name="required">Required field</string>
+    <string name="normal">Ideal weight</string>
+    <string name="underweight">You are underweight</string>
+    <string name="overweight">You are overweight</string>
+    <string name="obesity">Obesity</string>
 </resources>

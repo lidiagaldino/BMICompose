@@ -1,5 +1,6 @@
 package com.example.bmicompose
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -33,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bmicompose.ui.theme.BMIComposeTheme
 import com.example.bmicompose.utils.calculateBmi
+import com.example.bmicompose.utils.getColor
+import com.example.bmicompose.utils.getText
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,6 +93,16 @@ fun Header() {
 @Composable
 fun Form() {
 
+    val context = LocalContext.current
+
+    var bmiState by remember{
+        mutableStateOf(Color.White)
+    }
+
+    var bmiText by remember {
+        mutableStateOf(0)
+    }
+
     var weightState by rememberSaveable {
         mutableStateOf("")
     }
@@ -126,53 +140,85 @@ fun Form() {
             .fillMaxWidth()
     ) {
 
-        Text(text = stringResource(id = R.string.weight_label), modifier = Modifier.padding(10.dp))
+        Text(text = stringResource(id = R.string.weight_label), modifier = Modifier.padding(5.dp))
+        
+        Column() {
+            OutlinedTextField(
+                value = weightState,
+                onValueChange = {
+                    val lastChar = if (it.isEmpty()) it else it[it.length - 1]
+                    errorWeight = it.isEmpty()
+                    val newValue = if (lastChar == '.' || lastChar == ',') it.dropLast(1) else it
+                    weightState = newValue
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 10.dp, start = 10.dp)
+                    .focusRequester(weightFocusRequester),
+                label = { Text("Kg") },
+                trailingIcon = {
+                    if (errorWeight) Icon(imageVector = Icons.Filled.Error, contentDescription = "")
+                },
 
-        OutlinedTextField(
-            value = weightState,
-            onValueChange = {
-                val lastChar = if (it.isEmpty()) it else it[it.length - 1]
-                val newValue = if (lastChar == '.' || lastChar == ',') it.dropLast(1) else it
-                weightState = newValue
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 10.dp, start = 10.dp)
-                .focusRequester(weightFocusRequester),
-            label = { Text("Kg") },
-            trailingIcon = {
-                Icon(imageVector = Icons.Filled.Error, contentDescription = "")
-            },
-            isError = errorWeight,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp)
-        )
+                isError = errorWeight,
 
-        Text(text = stringResource(id = R.string.height_label), modifier = Modifier.padding(10.dp))
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
+            )
+            if (errorWeight){
+                Text(
+                    text = stringResource(id = R.string.required),
+                    color = Color.Red,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 10.dp, start = 10.dp),
+                    textAlign = TextAlign.End
+                )
+            }
+        }
 
+        
 
-        OutlinedTextField(
-            value = heightState,
-            onValueChange = {
-                val lastChar = if (it.isEmpty()) it else it[it.length - 1]
-                val newValue = if (lastChar == '.' || lastChar == ',') it.dropLast(1) else it
-                heightState = newValue
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 10.dp, start = 10.dp)
-                .focusRequester(heightFocusRequester),
-            label = { Text("Cm") },
-            trailingIcon = {
-                Icon(imageVector = Icons.Filled.Error, contentDescription = "")
-            },
-            isError = errorHeight,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp)
+        Text(text = stringResource(id = R.string.height_label), modifier = Modifier.padding(6.dp))
 
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = heightState,
+                onValueChange = {
+                    val lastChar = if (it.isEmpty()) it else it[it.length - 1]
+                    errorHeight = it.isEmpty()
+                    val newValue = if (lastChar == '.' || lastChar == ',') it.dropLast(1) else it
+                    heightState = newValue
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 10.dp, start = 10.dp)
+                    .focusRequester(heightFocusRequester),
+                label = { Text("Cm") },
+                trailingIcon = {
+                    if(errorHeight) Icon(imageVector = Icons.Filled.Error, contentDescription = "")
+                },
+                isError = errorHeight,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
+
+            )
+            
+            if (errorHeight){
+                Text(
+                    text = stringResource(id = R.string.required),
+                    color = Color.Red,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 10.dp, start = 10.dp),
+                    textAlign = TextAlign.End
+                )
+            }
+        }
+        
+        
 
         Button(
             onClick = {
@@ -181,6 +227,8 @@ fun Form() {
                 errorHeight = heightState.isEmpty()
                 if (!errorWeight && !errorHeight) {
                     bmi = calculateBmi(weightState.toFloat(), heightState.toFloat())
+                    bmiState = getColor(bmi)
+                    bmiText = getText(bmi)
                     state = true
                 }
 
@@ -218,14 +266,16 @@ fun Form() {
                     Text(
                         text = String.format("%.2f", bmi),
                         fontSize = 48.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = bmiState
                     )
                     Text(
-                        text = "Congratulations",
+                        text = stringResource(id = bmiText),
                         modifier = Modifier.fillMaxWidth(),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        color = bmiState
                     )
 
                     Row {
@@ -238,7 +288,17 @@ fun Form() {
                         }, modifier = Modifier.padding(10.dp)) {
                             Text(text = "Reset")
                         }
-                        Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(10.dp)) {
+                        Button(onClick = {
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
+                                type = "text/plain"
+                            }
+
+                            val shareIntent = Intent.createChooser(sendIntent, "Share to")
+
+                            context.startActivity(shareIntent)
+                        }, modifier = Modifier.padding(10.dp)) {
                             Text(text = "Share")
                         }
                     }
